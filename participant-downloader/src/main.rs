@@ -19,11 +19,12 @@ fn download_participants() -> Result<(), Error> {
     let td_selector = Selector::parse("td").unwrap();
 
     for tr in document.select(&tr_selector) {
-        println!("tr");
+        let option_time = tr.select(&td_selector).next().map(|td| td.inner_html());
 
-        for td in tr.select(&td_selector) {
-            println!("{}", td.inner_html());        
-        }
+        match option_time {
+            Some(time) => println!("{}", time),
+            None => println!("Skipping row")
+        };        
     }
 
     Ok(())
