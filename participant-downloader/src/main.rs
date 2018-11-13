@@ -3,7 +3,7 @@ extern crate reqwest;
 extern crate scraper;
 
 use failure::Error;
-use scraper::{Html, Selector};
+use scraper::{ElementRef, Html, Selector};
 
 mod participant_id
 {
@@ -65,46 +65,9 @@ fn download_participants() -> Result<(), Error> {
 
     let document = Html::parse_document(&html);
     let tr_selector = Selector::parse("tr").unwrap();
-    let td_selector = Selector::parse("td").unwrap();
 
     for tr in document.select(&tr_selector) {
-        let mut iter = tr.select(&td_selector);
-
-        let participant = match (
-            next_cell(&mut iter), 
-            next_cell(&mut iter), 
-            next_cell(&mut iter), 
-            next_cell(&mut iter), 
-            next_cell(&mut iter), 
-            next_cell(&mut iter), 
-            next_cell(&mut iter), 
-            next_cell(&mut iter)) {
-            (
-                Some(time), 
-                Some(id_string),
-                Some(last_name), 
-                Some(first_name), 
-                Some(country), 
-                Some(gender), 
-                Some(mach), 
-                Some(club)
-            ) => 
-                match participant_id::parse_id(id_string) {
-                    Some(id) => 
-                        Some(Participant {
-                            time,
-                            id,
-                            last_name,
-                            first_name,
-                            country,
-                            gender,
-                            mach,
-                            club
-                        }),
-                    _ => None
-                },
-            _ => None
-        };
+        let participant = parse_participant_row(tr);
 
         match participant { 
             Some(p) => println!("{:?}", p), 
@@ -113,4 +76,45 @@ fn download_participants() -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+fn parse_participant_row(tr: ElementRef<'_>) -> Option<Participant> {
+    let td_selector = Selector::parse("td").unwrap();
+    let mut iter = tr.select(&td_selector);
+
+    match (
+        next_cell(&mut iter), 
+        next_cell(&mut iter), 
+        next_cell(&mut iter), 
+        next_cell(&mut iter), 
+        next_cell(&mut iter), 
+        next_cell(&mut iter), 
+        next_cell(&mut iter), 
+        next_cell(&mut iter)) {
+        (
+            Some(time), 
+            Some(id_string),
+            Some(last_name), 
+            Some(first_name), 
+            Some(country), 
+            Some(gender), 
+            Some(mach), 
+            Some(club)
+        ) => 
+            match participant_id::parse_id(id_string) {
+                Some(id) => 
+                    Some(Participant {
+                        time,
+                        id,
+                        last_name,
+                        first_name,
+                        country,
+                        gender,
+                        mach,
+                        club
+                    }),
+                _ => None
+            },
+        _ => None
+    }
 }
