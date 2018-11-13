@@ -1,14 +1,20 @@
 extern crate failure;
 extern crate reqwest;
 extern crate scraper;
+extern crate serde;
+extern crate serde_json;
+
+#[macro_use]
+extern crate serde_derive;
 
 use failure::Error;
 use scraper::{ElementRef, Html, Selector};
+use std::fs::File;
+use std::io::Write;
 
 mod participant_id
 {
-    use std::fmt;
-    
+    #[derive(Debug, Serialize, Deserialize)]
     struct ParticipantIdNumber(u16);
 
     impl ParticipantIdNumber {
@@ -18,11 +24,7 @@ mod participant_id
         }
     }
 
-    impl fmt::Debug for ParticipantIdNumber {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "{}", &self.0) }
-    }
-
-    #[derive(Debug)]
+    #[derive(Debug, Serialize, Deserialize)]
     pub struct Id {
         letter: char,
         number: ParticipantIdNumber,
@@ -39,7 +41,7 @@ mod participant_id
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Participant {
     time: String,
     id: participant_id::Id,
@@ -53,10 +55,9 @@ struct Participant {
 
 fn main() {
     let list = download_participants().expect("Failed to download the participant list.");
-
-    for participant in list {
-        println!("{:?}", participant);
-    }
+    let j = serde_json::to_string(&list).expect("Failed to serialize to JSON.");
+    let mut file = File::create("pbp_participants.json").expect("Failed to create file.");
+    file.write_all(&j.as_bytes()).expect("Failed to write JSON to file.");
 }
 
 fn next_cell(row_iter: &mut scraper::element_ref::Select) -> Option<String> {
