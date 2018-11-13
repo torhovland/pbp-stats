@@ -52,30 +52,30 @@ struct Participant {
 }
 
 fn main() {
-    download_participants().expect("Failed to download the participant list.");
+    let list = download_participants().expect("Failed to download the participant list.");
+
+    for participant in list {
+        println!("{:?}", participant);
+    }
 }
 
 fn next_cell(row_iter: &mut scraper::element_ref::Select) -> Option<String> {
     row_iter.next().map(|td| td.inner_html())
 }
 
-fn download_participants() -> Result<(), Error> {
+fn download_participants() -> Result<Vec<Participant>, Error> {
     let html = reqwest::get("http://www.paris-brest-paris.org?lang=en&cat=presentation&page=resultats_2015")?
         .text()?;
 
     let document = Html::parse_document(&html);
     let tr_selector = Selector::parse("tr").unwrap();
 
-    for tr in document.select(&tr_selector) {
-        let participant = parse_participant_row(tr);
+    let list = document
+        .select(&tr_selector)
+        .filter_map(|tr| parse_participant_row(tr))
+        .collect();
 
-        match participant { 
-            Some(p) => println!("{:?}", p), 
-            _ => println!("No participant")
-        };
-    }
-
-    Ok(())
+    Ok(list)
 }
 
 fn parse_participant_row(tr: ElementRef<'_>) -> Option<Participant> {
